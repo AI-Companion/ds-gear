@@ -80,7 +80,7 @@ class BasePreprocessor(ABC):
         """
         print("===========> data split")
         X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=self.validation_split)
-        print("----> data splitted: validation ratio = %f" % self.validation_split)
+        print("----> data splitted: validation ratio = %.1f" % self.validation_split)
         return X_train, X_test, np.asarray(y_train), np.asarray(y_test)
 
     def save(self, file_name_prefix):

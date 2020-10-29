@@ -231,7 +231,7 @@ class NERRNN(BaseRNN):
         x_rnn = Bidirectional(LSTM(units=50, return_sequences=True, recurrent_dropout=0.2, dropout=0.2))(x)
         x = add([x, x_rnn])  # residual connection to the first biLSTM
         x = TimeDistributed(Dense(50, activation='relu'))(x)
-        crf = CRF(self.n_labels)
+        crf = CRF(self.n_labels, sparse_target=True)
         x = crf(x)
         model = Model(inputs=input_layer, outputs=x)
         model.compile(loss=crf.loss_function, optimizer='adam', metrics=[crf.accuracy])
@@ -257,11 +257,11 @@ class NERRNN(BaseRNN):
         if (X_test is not None) and (y_test is not None):
             # history = self.model.fit(x=X_train, y=y_train, epochs=self.n_iter, batch_size=64,
             #                        sample_weight=wts, validation_split=0.1, verbose=2)
+            y_train = np.expand_dims(y_train,2)            
             history = self.model.fit(X_train, y_train, batch_size=32, epochs=self.n_iter,
-                                     validation_split=0.1)
+                                     verbose=2, validation_split=0.1)
             y_hat = self.predict(X_test, labels_to_idx)
-            true_classes = np.argmax(y_test, axis=1).tolist()
-            y = [self.convert_idx_to_labels(sublist, labels_to_idx) for sublist in true_classes]
+            y = [self.convert_idx_to_labels(sublist, labels_to_idx) for sublist in y_test]
             y_flat = [val for sublist in y for val in sublist]
             y_hat_flat = [val for sublist in y_hat for val in sublist]
             report = classification_report(y_flat, y_hat_flat, output_dict=True)
