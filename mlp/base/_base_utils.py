@@ -8,37 +8,6 @@ import pandas as pd
 import json
 
 
-class BaseDataset(ABC):
-    """
-    Dataset handler for the imdb dataset
-    """
-    def __init__(self, script_file, dataset_url=None):
-        self._get_set(dataset_url, script_file)
-
-    def _get_set(self, dataset_url, script_file):
-        """
-        Checks if imdb dataset is downloaded or not, if not it'll collect it
-        Args:
-            dataset_url: web address of the imdb dataset
-        Return:
-            None
-        """
-        print("===========> imdb dataset collection")
-        root_dir = os.environ.get("MARABOU_HOME")
-        script_path = os.path.join(root_dir, "marabou/train/bash_scripts/", script_file)
-        subprocess.call("%s %s" % (script_path, dataset_url), shell=True)
-
-    @abstractmethod
-    def get_set(self, mode="train"):
-        """
-        Returns training data with the given number of rows
-        Args:
-            limit: max number of rows
-        Return:
-            training features and targets
-        """
-        pass
-
 class BaseConfigReader():
     """
     Parent class to load use case parameters from a .json file

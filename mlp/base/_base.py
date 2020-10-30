@@ -83,6 +83,7 @@ class BasePreprocessor(ABC):
         print("----> data splitted: validation ratio = %.1f" % self.validation_split)
         return X_train, X_test, np.asarray(y_train), np.asarray(y_test)
 
+    @abstractmethod
     def save(self, file_name_prefix):
         """
         Stores the data preprocessor under 'models folder'
@@ -120,7 +121,7 @@ class BaseRNN(ABC):
         self.model = None
         keys = kwargs.keys()
         if 'config' in keys and 'data_preprocessor' in keys:
-            self.init_from_config_file(kwargs['config'], kwargs['data_preprocessor'])
+            self.init_from_config_file(kwargs['config'], kwargs['data_preprocessor'], kwargs['save_folder'])
         else:
             self.init_from_files(kwargs['h5_file'], kwargs['class_file'])
 
@@ -142,7 +143,7 @@ class BaseRNN(ABC):
             self.max_length = pickle.load(f)
             self.word_index = pickle.load(f)
 
-    def init_from_config_file(self, config: BaseConfigReader, data_preprocessor: BasePreprocessor):
+    def init_from_config_file(self, config: BaseConfigReader, data_preprocessor: BasePreprocessor, save_folder:str):
         """
         initialize the class for the first time from a given configuration file and data processor
         Args:
@@ -156,6 +157,7 @@ class BaseRNN(ABC):
         self.embedding_dimension = config.embedding_dimension
         self.embeddings_name = config.embedding_algorithm
         self.n_iter = 5
+        self.save_folder = save_folder
         if self.embeddings_name == "glove":
             self.embeddings_path = config.embeddings_path_glove
         elif self.embeddings_name == "fasttext":
@@ -175,11 +177,11 @@ class BaseRNN(ABC):
         """
         if self.use_pretrained_embedding and self.embeddings_name == "glove":
             glove_embeddings = Glove6BEmbedding(self.embedding_dimension, self.word_index,
-                                                self.vocab_size, self.embeddings_path, self.max_length)
+                                                self.vocab_size, self.embeddings_path, self.max_length, self.save_folder)
             embedding_layer = glove_embeddings.embedding_layer
         elif self.use_pretrained_embedding and self.embeddings_name == "fasttext":
             fasttext_embeddings = FastTextEmbedding(self.word_index, self.vocab_size, self.embeddings_path,
-                                                    self.max_length)
+                                                    self.max_length, self.save_folder)
             embedding_layer = fasttext_embeddings.embedding_layer
         else:
             print("===========> embedding trained with the model")
@@ -288,3 +290,5 @@ class BaseRNN(ABC):
         plt.close()
         print("----> learning curve saved to %s" % plot_file_url)
 
+class BaseRF(ABC):
+    pass

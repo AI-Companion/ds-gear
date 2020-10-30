@@ -2,6 +2,8 @@ import subprocess
 import os
 import io
 import numpy as np
+from zipfile import ZipFile
+import wget
 from keras.layers import Embedding
 from keras.initializers import Constant
 from abc import ABC, abstractmethod
@@ -10,12 +12,14 @@ class RNNEmbedding(ABC):
     """
     Parent embeddings class
     """
-    def __init__(self, word_index, vocab_size, embeddings_path, max_length):
+    def __init__(self, word_index, vocab_size, embeddings_path, max_length, save_folder):
         self.word_index = word_index
         self.vocab_size = vocab_size
         self.embeddings_path = embeddings_path
         self.max_length = max_length
         self.embedding_dimension = 300
+        self.save_folder = save_folder
+        self.root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.embedding_layer = self.build_embedding()
 
     def build_embedding(self):
@@ -43,8 +47,8 @@ class Glove6BEmbedding(RNNEmbedding):
     """
     Loads glove embedding from stanford
     """
-    def __init__(self, embedding_dimension, word_index, vocab_size, embeddings_path, max_length):
-        super().__init__(word_index, vocab_size, embeddings_path, max_length)
+    def __init__(self, embedding_dimension, word_index, vocab_size, embeddings_path, max_length, save_folder):
+        super().__init__(word_index, vocab_size, embeddings_path, max_length, save_folder)
         self.embedding_dimension = embedding_dimension
         self.embedding_layer = self.build_embedding()
 
@@ -55,16 +59,23 @@ class Glove6BEmbedding(RNNEmbedding):
             None
         """
         print("===========> collecting pretrained embedding")
-        root_dir = os.environ.get("MARABOU_HOME")
-        script_path = os.path.join(root_dir, "marabou/train/bash_scripts/load_stanford_6B_embedding.sh")
-        subprocess.call("%s %s" % (script_path, self.embeddings_path), shell=True)
-        file_name = 'glove.6B.100d.txt'
+        output_zip_name = os.path.join(self.save_folder, "glove.6B.zip")
+        output_file_name = os.path.join(self.save_folder, "glove.6B.100d.txt")
         if self.embedding_dimension in [50, 100, 200, 300]:
             file_name = 'glove.6B.%id.txt' % self.embedding_dimension
-        file_url = os.path.join(os.getcwd(), 'embeddings', file_name)
-        print("----> embedding file saved to %s" % file_url)
+        output_file_name = os.path.join(self.save_folder, file_name)
+        if not os.path.isfile(output_file_name):
+            print("---> Collecting embedding file")
+            output_zip_name = wget.download(self.embeddings_path, out=output_zip_name)
+            print("")
+            with ZipFile(output_zip_name, 'r') as zipObj:
+                zipObj.extractall(self.save_folder)
+            os.remove(output_zip_name)
+            print("---> embedding file extracted to %s" % output_file_name)
+        else:
+            print("---> Embedding already exists %s" % output_file_name)
         embedding_index = {}
-        with open(file_url) as f:
+        with open(output_file_name) as f:
             for line in f:
                 word, coefs = line.split(maxsplit=1)
                 coefs = np.fromstring(coefs, 'f', sep=' ')
@@ -90,8 +101,8 @@ class FastTextEmbedding(RNNEmbedding):
     year={2018}
     }
     """
-    def __init__(self, word_index, vocab_size, embeddings_path, max_length):
-        super().__init__(word_index, vocab_size, embeddings_path, max_length)
+    def __init__(self, word_index, vocab_size, embeddings_path, max_length, save_folder):
+        super().__init__(word_index, vocab_size, embeddings_path, max_length, save_folder)
 
     def get_embedding_matrix(self):
         """
@@ -100,13 +111,20 @@ class FastTextEmbedding(RNNEmbedding):
             None
         """
         print("===========> collecting pretrained embedding")
-        root_dir = os.environ.get("MARABOU_HOME")
-        script_path = os.path.join(root_dir, "marabou/train/bash_scripts/load_fasttext_16B_embedding.sh")
-        subprocess.call("%s %s" % (script_path, self.embeddings_path), shell=True)
-        file_name = 'wiki-news-300d-1M.vec'
-        file_url = os.path.join(root_dir, 'marabou/train/embeddings', file_name)
-        print("----> embedding file saved to %s" % file_url)
-        fin = io.open(file_url, 'r', encoding='utf-8', newline='\n', errors='ignore')
+        output_zip_name = os.path.join(self.save_folder, "wiki-news-300d-1M.vec.zip")
+        output_file_name = os.path.join(self.save_folder, "wiki-news-300d-1M.vec")
+        if not os.path.isfile(output_file_name):
+            print("---> Collecting embedding file")
+            output_zip_name = wget.download(self.embeddings_path, out=output_zip_name)
+            print("")
+            with ZipFile(output_zip_name, 'r') as zipObj:
+                zipObj.extractall(self.save_folder)
+            os.remove(output_zip_name)
+            print("---> embedding file extracted to %s" % output_file_name)
+        else:
+            print("---> Embedding already exists %s" % output_file_name)
+
+        fin = io.open(output_file_name, 'r', encoding='utf-8', newline='\n', errors='ignore')
         embedding_index = {}
         for line in fin:
             tokens = line.rstrip().split(' ')

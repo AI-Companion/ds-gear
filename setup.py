@@ -33,7 +33,7 @@ setup(name='mlp',
       zip_safe=False,
       dependency_links=['git+https://www.github.com/keras-team/keras-contrib.git#egg=keras-contrib'],
       install_requires=INSTALL_REQUIREMENTS,
-      package_data={},
+      package_data={'mlp': ['LICENSE']},
       include_package_data=True,
       cmdClass={
           'install': InstallCommand

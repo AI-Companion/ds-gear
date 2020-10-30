@@ -4,10 +4,9 @@ and neural network abstract classes.
 """
 
 from ._base import BasePreprocessor, BaseRNN
-from ._base_utils import BaseConfigReader, BaseDataset, RNNConfigReader
+from ._base_utils import BaseConfigReader, RNNConfigReader
 
 __all__ = ['BasePreprocessor',
            'BaseRNN',
            'BaseConfigReader',
-           'RNNConfigReader',
-           'BaseDataset']
+           'RNNConfigReader']

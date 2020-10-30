@@ -177,7 +177,7 @@ class NERRNN(BaseRNN):
             self.max_length = pickle.load(f)
             self.word_index = pickle.load(f)
 
-    def init_from_config_file(self, config: NERConfigReader, data_preprocessor: NERPreprocessor):
+    def init_from_config_file(self, config: NERConfigReader, data_preprocessor: NERPreprocessor, save_folder:str):
         """
         Initializes the class for the first time from a given configuration file and data processor
         Args:
@@ -195,6 +195,7 @@ class NERRNN(BaseRNN):
         elif self.embeddings_name == "fasttext":
             self.embeddings_path = config.embeddings_path_fasttext
         self.max_length = config.max_sequence_length
+        self.save_folder = save_folder
         self.n_labels = len(data_preprocessor.labels_to_idx)
         self.word_index = data_preprocessor.tokenizer_obj.word_index
         self.embedding_layer = self.build_embedding()
