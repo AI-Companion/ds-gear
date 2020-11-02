@@ -28,21 +28,24 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='ds-gear',
-      packages=find_packages(),
+      packages=find_packages(include=['dsg', 'dsg.*']),
       author='Marouen Azzouz, Youssef Azzouz',
       author_email='azzouz.marouen@gmail.com, youssef.azzouz1512@gmail.com',
+      keywords='machine learning named entity recognition sentiment analysis deep learning topic detection',
       description="Data science gear: Python API for advanced machine learning algorithms built on top of sklearn, tensorflow and keras",
       long_description=long_description,
       long_description_content_type="text/markdown",
       url="https://github.com/AI-Companion/ds-gear",
-      version='0.1.1',
+      version='0.1.2',
       zip_safe=False,
       dependency_links=['git+https://www.github.com/keras-team/keras-contrib.git#egg=keras-contrib'],
       install_requires=INSTALL_REQUIREMENTS,
       package_data={'ds-gear': ['LICENSE']},
       include_package_data=True,
+      python_requires='>=3.6',
       classifiers=[
-          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.6",
+          "Development Status :: 3 - Alpha",
           "License :: OSI Approved :: MIT License",
           "Operating System :: OS Independent",],
       cmdClass={
