@@ -4,8 +4,8 @@ import pickle
 import time
 from typing import List
 import numpy as np
-from mlp.base import RNNConfigReader, BasePreprocessor, BaseRNN
-from mlp.layers import Glove6BEmbedding, FastTextEmbedding
+from dsg.base import RNNConfigReader, BasePreprocessor, BaseRNN
+from dsg.layers import Glove6BEmbedding, FastTextEmbedding
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -138,7 +138,7 @@ class NERPreprocessor(BasePreprocessor):
             tokenized_labels = pad_sequences(tokenized_labels, maxlen=self.max_sequence_length, padding="post",
                                             value=self.labels_to_idx["pad"])
             print("labels tensor shape ", tokenized_labels.shape)
-        return review_pad, n_tokens_list, tokenized_labels
+        return review_pad, sequences, n_tokens_list, tokenized_labels
 
 class NERConfigReader(RNNConfigReader):
     """

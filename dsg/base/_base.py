@@ -11,7 +11,7 @@ import subprocess
 from typing import List
 import numpy as np
 from ._base_utils import BaseConfigReader
-from mlp.layers import FastTextEmbedding, Glove6BEmbedding
+from dsg.layers import FastTextEmbedding, Glove6BEmbedding
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input, load_model
