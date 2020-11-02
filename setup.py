@@ -25,7 +25,7 @@ class InstallCommand(install):
         install.run(self)
 
 
-setup(name='mlp',
+setup(name='dsg',
       packages=find_packages(),
       author='Marouen Azzouz, Youssef Azzouz',
       author_email='azzouz.marouen@gmail.com, youssef.azzouz1512@gmail.com',
@@ -33,8 +33,12 @@ setup(name='mlp',
       zip_safe=False,
       dependency_links=['git+https://www.github.com/keras-team/keras-contrib.git#egg=keras-contrib'],
       install_requires=INSTALL_REQUIREMENTS,
-      package_data={'mlp': ['LICENSE']},
+      package_data={'dsg': ['LICENSE']},
       include_package_data=True,
+      classifiers=[
+          "Programming Language :: Python :: 3",
+          "License :: OSI Approved :: MIT License",
+          "Operating System :: OS Independent",],
       cmdClass={
           'install': InstallCommand
       })
