@@ -1,4 +1,4 @@
-Data science gear (ds-gear) is a Python module for machine learning built on top of sklearn, tensorflow and keras and is distributed under the Mit license.
+Data science gear (ds-gear) is a Python API for advanced machine learning algorithms built on top of sklearn, tensorflow and keras and is distributed under the Mit license.
 ### Installation
 ## Depenencies
 - Python (> 3.6)

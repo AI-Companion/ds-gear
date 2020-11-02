@@ -24,11 +24,17 @@ class InstallCommand(install):
         subprocess.call("git config core.hooksPath .githooks/", shell=True)
         install.run(self)
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 setup(name='ds-gear',
       packages=find_packages(),
       author='Marouen Azzouz, Youssef Azzouz',
       author_email='azzouz.marouen@gmail.com, youssef.azzouz1512@gmail.com',
+      description="Data science gear: Python API for advanced machine learning algorithms built on top of sklearn, tensorflow and keras",
+      long_description=long_description,
+      long_description_content_type="text/markdown",
+      url="https://github.com/AI-Companion/ds-gear",
       version='0.1.1',
       zip_safe=False,
       dependency_links=['git+https://www.github.com/keras-team/keras-contrib.git#egg=keras-contrib'],
