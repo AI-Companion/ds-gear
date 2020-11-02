@@ -25,7 +25,7 @@ class InstallCommand(install):
         install.run(self)
 
 
-setup(name='dsg',
+setup(name='ds-gear',
       packages=find_packages(),
       author='Marouen Azzouz, Youssef Azzouz',
       author_email='azzouz.marouen@gmail.com, youssef.azzouz1512@gmail.com',
@@ -33,7 +33,7 @@ setup(name='dsg',
       zip_safe=False,
       dependency_links=['git+https://www.github.com/keras-team/keras-contrib.git#egg=keras-contrib'],
       install_requires=INSTALL_REQUIREMENTS,
-      package_data={'dsg': ['LICENSE']},
+      package_data={'ds-gear': ['LICENSE']},
       include_package_data=True,
       classifiers=[
           "Programming Language :: Python :: 3",
