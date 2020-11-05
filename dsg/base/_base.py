@@ -10,7 +10,6 @@ import pickle
 import subprocess
 from typing import List
 import numpy as np
-from ._base_utils import BaseConfigReader
 from dsg.layers import FastTextEmbedding, Glove6BEmbedding
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
@@ -120,10 +119,18 @@ class BaseRNN(ABC):
         self.embedding_layer = None
         self.model = None
         keys = kwargs.keys()
-        if 'config' in keys and 'data_preprocessor' in keys:
-            self.init_from_config_file(kwargs['config'], kwargs['data_preprocessor'], kwargs['save_folder'])
+        if 'data_preprocessor' in keys:
+            self.init_from_config(pre_trained_embedding=kwargs['pre_trained_embedding'],
+                                       vocab_size=kwargs['vocab_size'],
+                                       embedding_dimension=kwargs['embedding_dimension'],
+                                       embedding_algorithm=kwargs['embedding_algorithm'],
+                                       save_folder=kwargs['save_folder'],
+                                       n_iter=kwargs['n_iter'],
+                                       embeddings_path=kwargs['embeddings_path'],
+                                       max_sequence_length=kwargs['max_sequence_length'],
+                                       data_preprocessor=kwargs['data_preprocessor'])
         else:
-            self.init_from_files(kwargs['h5_file'], kwargs['class_file'])
+            self.init_from_files(h5_file=kwargs['h5_file'], class_file=kwargs['class_file'])
 
     def init_from_files(self, h5_file: str, class_file:str):
         """
@@ -143,26 +150,25 @@ class BaseRNN(ABC):
             self.max_length = pickle.load(f)
             self.word_index = pickle.load(f)
 
-    def init_from_config_file(self, config: BaseConfigReader, data_preprocessor: BasePreprocessor, save_folder:str):
+    def init_from_config(self, pre_trained_embedding: bool, vocab_size:int, embedding_dimension:int, embedding_algorithm: str,
+                         save_folder: str, n_iter: int, embeddings_path: str, max_sequence_length: int,
+                         data_preprocessor: BasePreprocessor):
         """
         initialize the class for the first time from a given configuration file and data processor
         Args:
-            config: .json configuration reader
+            config: .json configuration file
             data_preprocessor: preprocessing tool for the training data
         Return:
             None
         """
-        self.use_pretrained_embedding = config.pre_trained_embedding
-        self.vocab_size = config.vocab_size
-        self.embedding_dimension = config.embedding_dimension
-        self.embeddings_name = config.embedding_algorithm
-        self.n_iter = 5
+        self.use_pretrained_embedding = pre_trained_embedding
+        self.vocab_size = vocab_size
+        self.embedding_dimension = embedding_dimension
+        self.embeddings_name = embedding_algorithm
+        self.n_iter = n_iter
         self.save_folder = save_folder
-        if self.embeddings_name == "glove":
-            self.embeddings_path = config.embeddings_path_glove
-        elif self.embeddings_name == "fasttext":
-            self.embeddings_path = config.embeddings_path_fasttext
-        self.max_length = config.max_sequence_length
+        self.embeddings_path = embeddings_path
+        self.max_length = max_sequence_length
         self.word_index = data_preprocessor.tokenizer_obj.word_index
         self.embedding_layer = self.build_embedding()
         self.model = self.build_model()

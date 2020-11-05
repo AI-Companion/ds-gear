@@ -4,8 +4,8 @@ import pickle
 import time
 from typing import List
 import numpy as np
-from mlp.base import RNNConfigReader, BasePreprocessor, BaseRNN
-from mlp.layers import Glove6BEmbedding, FastTextEmbedding
+from dsg.base import BasePreprocessor, BaseRNN
+from dsg.layers import Glove6BEmbedding, FastTextEmbedding
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -17,7 +17,7 @@ nltk.download('punkt')
 nltk.download('stopwords')
 
 
-class SAPreprocessor(BasePreprocessor):
+class RNNMTOPreprocessor(BasePreprocessor):
     """
     Utility class performing several data preprocessing steps
     """
@@ -117,16 +117,9 @@ class SAPreprocessor(BasePreprocessor):
         return data
 
 
-class SAConfigReader(RNNConfigReader):
+class RNNMTO(BaseRNN):
     """
-    Sentiment analysis json configuration file reader
-    """
-    pass
-
-
-class SARNN(BaseRNN):
-    """
-    Sentiment Analysis RNN classifier
+    RNN Many to One classifier, this architecture applies to use cases such as sentiment analysis, reviews rating, ...
     """
     def build_model(self):
         """

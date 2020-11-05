@@ -4,7 +4,7 @@ import pickle
 import time
 from typing import List
 import numpy as np
-from dsg.base import RNNConfigReader, BasePreprocessor, BaseRNN
+from dsg.base import BasePreprocessor, BaseRNN
 from dsg.layers import Glove6BEmbedding, FastTextEmbedding
 import nltk
 from nltk.tokenize import word_tokenize
@@ -23,7 +23,7 @@ nltk.download('punkt')
 nltk.download('stopwords')
 
 
-class NERPreprocessor(BasePreprocessor):
+class RNNMTMPreprocessor(BasePreprocessor):
     """
     Utility class performing several data preprocessing steps
     """
@@ -138,24 +138,17 @@ class NERPreprocessor(BasePreprocessor):
             tokenized_labels = pad_sequences(tokenized_labels, maxlen=self.max_sequence_length, padding="post",
                                             value=self.labels_to_idx["pad"])
             print("labels tensor shape ", tokenized_labels.shape)
-        return review_pad, sequences, n_tokens_list, tokenized_labels
-
-class NERConfigReader(RNNConfigReader):
-    """
-    Named Entity Recognition analysis json configuration file reader
-    """
-    pass
+        return review_pad, lines, n_tokens_list, tokenized_labels
 
 
-class NERRNN(BaseRNN):
+class RNNMTM(BaseRNN):
     """
-    Named entity recognition RNN classifier
+    RNN Many to Many classifier, this architecture serves applications such as Named Entity Recognition, machine translation ...
     """
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
         self.n_labels = None
         self.labels_to_idx = None
-        self.n_iter = 5
+        super().__init__(**kwargs)
     
     def init_from_files(self, h5_file:str, class_file:str):
         """
@@ -177,7 +170,9 @@ class NERRNN(BaseRNN):
             self.max_length = pickle.load(f)
             self.word_index = pickle.load(f)
 
-    def init_from_config_file(self, config: NERConfigReader, data_preprocessor: NERPreprocessor, save_folder:str):
+    def init_from_config(self, pre_trained_embedding: bool, vocab_size:int, embedding_dimension:int, embedding_algorithm: str,
+                         save_folder: str, n_iter: int, embeddings_path: str, max_sequence_length: int,
+                         data_preprocessor: RNNMTMPreprocessor):
         """
         Initializes the class for the first time from a given configuration file and data processor
         Args:
@@ -186,15 +181,13 @@ class NERRNN(BaseRNN):
         Return:
             None
         """
-        self.use_pretrained_embedding = config.pre_trained_embedding
-        self.vocab_size = config.vocab_size
-        self.embedding_dimension = config.embedding_dimension
-        self.embeddings_name = config.embedding_algorithm
-        if self.embeddings_name == "glove":
-            self.embeddings_path = config.embeddings_path_glove
-        elif self.embeddings_name == "fasttext":
-            self.embeddings_path = config.embeddings_path_fasttext
-        self.max_length = config.max_sequence_length
+        self.use_pretrained_embedding = pre_trained_embedding
+        self.vocab_size = vocab_size
+        self.embedding_dimension = embedding_dimension
+        self.embeddings_name = embedding_algorithm
+        self.embeddings_path = embeddings_path
+        self.max_length = max_sequence_length
+        self.n_iter = n_iter
         self.save_folder = save_folder
         self.n_labels = len(data_preprocessor.labels_to_idx)
         self.word_index = data_preprocessor.tokenizer_obj.word_index
@@ -361,38 +354,3 @@ class NERRNN(BaseRNN):
             f.write(line)
         f.close()
         print("----> classification report saved to %s" % report_file_url)
-
-    def visualize(self, questions_list_tokenized, labels_list):
-        """
-        Visualization method for the nlp model classes
-        Args:
-            questions_list_tokenized: a tokenized list corresponding to the input text
-            labels_list: a list of predicted labels for each input text
-        Return:
-            display of the result stored in a string
-        """
-        result = "{:15} | {:5}\n".format("Word", "Pred")
-        result += "=" * 20
-        result += "\n"
-        for i in range(len(labels_list)):
-            for word, label in zip(questions_list_tokenized[i], labels_list[i]):
-                label = label.replace("B-geo", "Geographical Entity")
-                label = label.replace("I-geo", "Geographical Entity")
-                label = label.replace("B-tim", "Time indicator")
-                label = label.replace("I-tim", "Time indicator")
-                label = label.replace("B-org", "Organization")
-                label = label.replace("I-org", "Organization")
-                label = label.replace("B-gpe", "Geopolitical Entity")
-                label = label.replace("I-gpe", "Geopolitical Entity")
-                label = label.replace("B-per", "Person")
-                label = label.replace("I-per", "Person")
-                label = label.replace("B-eve", "Event")
-                label = label.replace("I-eve", "Event")
-                label = label.replace("B-art", "Artifact")
-                label = label.replace("I-art", "Artifact")
-                label = label.replace("B-nat", "Natural Phenomenon")
-                label = label.replace("I-nat", "Natural Phenomenon")
-                label = label.replace("O", "no Label")
-                result += "{:15} | {:5}\n".format(word, label)
-            result += "\n"
-        return result
