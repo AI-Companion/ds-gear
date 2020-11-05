@@ -18,8 +18,10 @@ Example applications include Named entity recognition, machine translation
 - Nltk (==3.5)
 - keras (v 2.3.1)
 - tensorflow (v 2.2.0)
+- keras-contrib (need to be installed prior to this package)
 ## User installation
-pip install ds-gear
+1. keras-contrib installation (please refer to git repo @ https://github.com/keras-team/keras-contrib)
+2. package installation: `pip install ds-gear`
 
 ### Source code
 You can check the latest sources with the command:  
