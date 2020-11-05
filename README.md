@@ -1,4 +1,11 @@
 Data science gear (ds-gear) is a Python API for advanced machine learning algorithms built on top of sklearn, tensorflow and keras and is distributed under the Mit license.
+### Description
+1. RNN_MTO_Classifier:  
+Text scoring RNN based on Many-to-One architecture.  
+Example applications include sentiment analysis, review scoring  
+2. RNN_MTM_Classifier:  
+Text classification RNN based on Many-to-Many architecture.  
+Example applications include Named entity recognition, machine translation  
 ### Installation
 ## Depenencies
 - Python (> 3.6)
@@ -15,5 +22,8 @@ Data science gear (ds-gear) is a Python API for advanced machine learning algori
 pip install ds-gear
 
 ### Source code
-You can check the latest sources with the command:
-git clone https://github.com/AI-Companion/ds-gear.git
+You can check the latest sources with the command:  
+`git clone https://github.com/AI-Companion/ds-gear.git`
+
+
+
