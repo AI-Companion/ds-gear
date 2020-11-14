@@ -14,47 +14,62 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
-from src.utils.config_loader import FashionClassifierConfigReader
+from dsg.base import BasePreprocessor, BaseNN
 
 
-class DataPreprocessor:
+class CNNClassifierPreprocessor(BasePreprocessor):
     """
     Utility class performing several data preprocessing steps
     """
-    def __init__(self, config: FashionClassifierConfigReader):
-        self.validation_split = config.validation_split
-        self.image_height = config.image_height
-        self.image_width = config.image_width
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    def split_train_test(self, X, y):
+    def init_from_config(self, image_height: int, image_width: int, validation_split: float):
+        self.validation_split = validation_split
+        self.image_height = image_height
+        self.image_width = image_width
+        self.labels_to_idx = None
+
+    def init_from_file(self, preprocessor_file: str):
         """
-        Wrapper method to split training data into a validation set and a training set
+        Loads preprocessing tools for the model
         Args:
-            X: tokenized predictors
-            y: labels
-        Returns:
-            tuple consisting of training predictors, training labels, validation predictors, validation labels
+            preprocessor_file: url to saved preprocessing file
+        Return:
+            preprocessed object
         """
-        print("===========> data split")
-        unique_labels = list(set(y))
-        n_labels = len(unique_labels)
-        labels_to_idx = {t: i for i, t in enumerate(unique_labels)}
-        idx_to_labels = {i: t for i, t in enumerate(unique_labels)}
-        y = [labels_to_idx[i] for i in y]
-        y = to_categorical(y, num_classes=n_labels)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=self.validation_split)
-        print("----> data split finish")
-        print('training features shape ', X_train.shape)
-        print('testing features shape ', X_test.shape)
-        print('training target shape ', np.asarray(y_train).shape)
-        print('testing target shape ', np.asarray(y_test).shape)
-        return X_train, X_test, np.asarray(y_train), np.asarray(y_test), idx_to_labels
+        with open(preprocessor_file, 'rb') as f:
+            self.image_height = pickle.load(f)
+            self.image_width = pickle.load(f)
+            self.validation_split = pickle.load(f)
+            self.labels_to_idx = pickle.load(f)
 
-    def load_images(self, X):
+    def clean(self, X):
+        return X
+
+    def save(self, file_name_prefix, save_folder):
+        """
+        Stores the data preprocessor under 'models folder'
+        Args:
+            file_name_prefix: a file name prefix having the following format 'named_entity_recognition_%Y%m%d_%H%M%S'
+            save_folder: folder under which to save the files
+        Return:
+            None
+        """
+        file_url = os.path.join(save_folder, file_name_prefix + "_preprocessor.pkl")
+        with open(file_url, 'wb') as handle:
+            pickle.dump(self.image_height, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.image_width, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.validation_split, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.labels_to_idx, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print("----> proprocessor object saved to %s" % file_url)
+
+    def preprocess(self, X, y=None):
         """
         Loads an array containing training images ready to be injected in the CNN
         Args:
             X: list of image urls
+            y: labels
         Returns:
             array having shape (n_images, image_height, image_width, 3)
         """
@@ -64,10 +79,42 @@ class DataPreprocessor:
             im = cv2.resize(im, (self.image_width, self.image_height))
             X_result.append(im)
         X_result = np.asarray(X_result)
-        return X_result
+        if y is not None:
+            y_result = [self.labels_to_idx[k] for k in y]
+            y_result = to_categorical(y_result, len(self.labels_to_idx))
+            return X_result, y_result
+        else:
+            return X_result
+
+    def split_train_test(self, X, y):
+        """
+        Wrapper method to split training data into a validation set and a training set
+        Args:
+            X: tokenized predictors
+            y: labels
+        Return:
+            tuple consisting of training predictors, training labels, validation predictors, validation labels
+        """
+        print("===========> data split")
+        X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, stratify=y, test_size=self.validation_split)
+        print("----> data splitted: validation ratio = %.1f" % self.validation_split)
+        return X_train, X_test, y_train, y_test
+    
+    def fit(self, X, y):
+        """
+        updates the labels_to_idx dict with the training values
+        Args:
+            X: list of image urls
+            y: labels
+        Returns:
+            None
+        """
+        labels = list(set(y))
+        self.labels_to_idx = {k:v for v,k in enumerate(labels)}
+        return
 
 
-class CNNClassifier:
+class CNNClassifier(BaseNN):
     """
     Handles the RNN model
     """
@@ -81,47 +128,56 @@ class CNNClassifier:
         self.idx_to_labels = None
         self.batch_size = None
         keys = kwargs.keys()
-        if 'config' in keys:
-            self.init_from_config_file(args[0], kwargs['config'])
+        if 'h5_file' in keys:
+            self.init_from_files(h5_file=kwargs['h5_file'], idx_to_labels=kwargs['idx_to_labels'])
         else:
-            self.init_from_files(kwargs['h5_file'], kwargs['class_file'])
+            self.init_from_config(idx_to_labels=kwargs['idx_to_labels'],
+                                 pre_trained_cnn=kwargs['pre_trained_cnn'],
+                                 pretrained_network_name=kwargs['pretrained_network_name'],
+                                 n_iter=kwargs['n_iter'],
+                                 image_height=kwargs['image_height'],
+                                 image_width=kwargs['image_width'],
+                                 batch_size=kwargs['batch_size'],
+                                 pretrained_network_path=kwargs['pretrained_network_path'])
 
-    def init_from_files(self, h5_file, class_file):
+    def init_from_files(self, h5_file, idx_to_labels):
         """
         Initializes the class from a previously saved model
         Args:
             h5_file: url to a saved class
+            idx_to_labels: conversion from indices to original labels
         Return:
             None
         """
         self.model = load_model(h5_file)
-        with open(class_file, 'rb') as f:
-            self.image_height = pickle.load(f)
-            self.image_width = pickle.load(f)
-            self.idx_to_labels = pickle.load(f)
+        self.idx_to_labels = idx_to_labels
 
-    def init_from_config_file(self, idx_to_labels, config: FashionClassifierConfigReader):
+    def init_from_config(self, idx_to_labels, pre_trained_cnn, pretrained_network_name,
+                        n_iter, image_height, image_width, batch_size, pretrained_network_path):
         """
         initialize the class for the first time from a given configuration file and data processor
         Args:
             idx_to_labels: conversion from indices to original labels
-            config: .json configuration reader
+            pre_trained_cnn: whether to use a pretrained network
+            pretrained_network_name: name of the pretrained network to use
+            n_iter: number of backprop iterations
+            image_height: height in pixels
+            image_width: width in pixels
+            batch_size: back prop batch size
+            pretrained_network_path: url for the pretrained network
         Return:
             None
         """
-        self.use_pretrained_cnn = config.pre_trained_cnn
-        self.pretrained_cnn_name = config.pretrained_network_name
+        self.use_pretrained_cnn = pre_trained_cnn
+        self.pretrained_cnn_name = pretrained_network_name
         self.model = None
         self.n_iter = 10
-        self.image_height = config.image_height
-        self.image_width = config.image_width
+        self.image_height = image_height
+        self.image_width = image_width
         self.idx_to_labels = idx_to_labels
-        self.batch_size = config.batch_size
+        self.batch_size = batch_size
         self.n_labels = len(idx_to_labels)
-        if self.pretrained_network_name == "vgg16":
-            self.pretrained_network_path = config.pretrained_network_vgg
-        elif self.pretrained_network_name == "lenet":
-            self.pretrained_network_path = config.pretrained_network_lenet
+        self.pretrained_network_path = pretrained_network_path
         self.model = self.build_model()
 
     def build_model(self):
@@ -181,8 +237,10 @@ class CNNClassifier:
             numpy array containing the class for token character in the sentence
         """
         probs = self.model.predict(X_test)
-        labels = np.argmax(probs, axis=1)
-        labels = [self.idx_to_labels[i] for i in labels]
+        print(probs)
+        ids = np.argmax(probs, axis=1)
+        max_probs = probs.max(axis=1)
+        labels = [self.idx_to_labels[i] for i in ids]
         return labels
 
     def predict_proba(self, X_test):
@@ -193,88 +251,21 @@ class CNNClassifier:
         Return:
             numpy array containing the probabilities of a positive review for each list entry
         """
+        print("classed dict")
+        print(self.idx_to_labels)
         probs = self.model.predict(X_test)
         return probs
 
-    def save_model(self, file_name_prefix):
+    def save(self, file_name_prefix, save_folder):
         """
-        Saves the trained model into a h5 file
+        Stores the data preprocessor under 'models folder'
         Args:
             file_name_prefix: a file name prefix having the following format 'sentiment_analysis_%Y%m%d_%H%M%S'
+            save_folder: folder under which to save the files
         Return:
             None
         """
-        root_dir = os.environ.get("MARABOU_HOME")
-        if not os.path.isdir(os.path.join(root_dir, "marabou/train/trained_models")):
-            os.mkdir(os.path.join(root_dir, "marabou/train/trained_models"))
-        model_folder = os.path.join(root_dir, "marabou/train/trained_models")
-        file_url_keras_model = os.path.join(model_folder, file_name_prefix + "_rnn_model.h5")
+        file_url_keras_model = os.path.join(save_folder, file_name_prefix + "_rnn_model.h5")
         self.model.save(file_url_keras_model)
-        file_url_class = os.path.join(model_folder, file_name_prefix + "_rnn_class.pkl")
-        with open(file_url_class, 'wb') as handle:
-            pickle.dump(self.image_height, handle)
-            pickle.dump(self.image_width, handle)
-            pickle.dump(self.idx_to_labels, handle)
         print("----> model saved to %s" % file_url_keras_model)
-        print("----> class saved to %s" % file_url_class)
-
-    def save_classification_report(self, report, file_name_prefix):
-        """
-        Saves the classification report to a txt file
-        Args:
-            report: a classification report object
-            file_name_prefix: a file name prefix having the following format 'sentiment_analysis_%Y%m%d_%H%M%S'
-        Return:
-            None
-        """
-        root_dir = os.environ.get("MARABOU_HOME")
-        if not os.path.isdir(os.path.join(root_dir, "marabou/train/perf")):
-            os.mkdir(os.path.join(root_dir, "marabou/train/perf"))
-        plot_folder = os.path.join(root_dir, "marabou/train/perf")
-        report_file_url = os.path.join(plot_folder, file_name_prefix + "_report.txt")
-        df = pd.DataFrame(report).transpose().round(2)
-        df['classes'] = df.index
-        f = open(report_file_url, "w")
-        line = "{:15} |{:10} |{:10} |{:10} |{:10}|\n".format("classes", "precision", "recall", "f1-score", "support")
-        f.write(line)
-        for _, row in df.iterrows():
-            line = "{:15} |{:10} |{:10} |{:10} |{:10}|\n".format(row[4], row[0], row[1], row[2], row[3])
-            f.write(line)
-        f.close()
-        print("----> classification report saved to %s" % report_file_url)
-
-    def save_learning_curve(self, history, file_name_prefix):
-        """
-        Saves the learning curve plot
-        Args:
-            history: a dictionary object containing training and validation dataset loss function values and
-            objective function values for each training iteration
-            file_name_prefix: a file name prefix having the following format 'fashion_mnist_%Y%m%d_%H%M%S'
-        Return:
-            None
-        """
-        root_dir = os.environ.get("MARABOU_HOME")
-        if not os.path.isdir(os.path.join(root_dir, "marabou/train/perf")):
-            os.mkdir(os.path.join(root_dir, "marabou/train/perf"))
-        plot_folder = os.path.join(root_dir, "marabou/train/perf")
-
-        acc = history.history['acc']
-        val_acc = history.history['val_acc']
-        loss = history.history['loss']
-        val_loss = history.history['val_loss']
-        epochs = range(len(acc))
-
-        fig, ax = plt.subplots(1, 2)
-        ax[0].plot(epochs, acc, 'bo', label='Training acc')
-        ax[0].plot(epochs, val_acc, 'b', label='Validation acc')
-        ax[0].set_title('Training and validation accuracy')
-        ax[0].legend()
-        fig.suptitle('model performance')
-        ax[1].plot(epochs, loss, 'bo', label='Training loss')
-        ax[1].plot(epochs, val_loss, 'b', label='Validation loss')
-        ax[1].set_title('Training and validation loss')
-        ax[1].legend()
-        plot_file_url = os.path.join(plot_folder, file_name_prefix + "_learning_curve.png")
-        plt.savefig(plot_file_url)
-        plt.close()
-        print("----> learning curve saved to %s" % plot_file_url)
+    

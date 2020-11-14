@@ -332,25 +332,3 @@ class RNNMTM(BaseRNN):
             pickle.dump(self.word_index, handle)
         print("----> model saved to %s" % file_url_keras_model)
         print("----> class saved to %s" % file_url_class)
-
-    def save_classification_report(self, report, file_name_prefix, save_folder):
-        """
-        Saves the classification report to a txt file
-        Args:
-            report: a classification report object
-            file_name_prefix: a file name prefix having the following format 'named_entity_recognition_%Y%m%d_%H%M%S'
-            save_folder: folder under which to save the files
-        Return:
-            None
-        """
-        report_file_url = os.path.join(save_folder, file_name_prefix + "_report.txt")
-        df = pd.DataFrame(report).transpose().round(2)
-        df['classes'] = df.index
-        f = open(report_file_url, "w")
-        line = "{:15} |{:10} |{:10} |{:10} |{:10}|\n".format("classes", "precision", "recall", "f1-score", "support")
-        f.write(line)
-        for _, row in df.iterrows():
-            line = "{:15} |{:10} |{:10} |{:10} |{:10}|\n".format(row[4], row[0], row[1], row[2], row[3])
-            f.write(line)
-        f.close()
-        print("----> classification report saved to %s" % report_file_url)

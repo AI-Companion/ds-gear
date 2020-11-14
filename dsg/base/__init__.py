@@ -3,7 +3,8 @@
 and neural network abstract classes.
 """
 
-from ._base import BasePreprocessor, BaseRNN
+from ._base import BasePreprocessor, BaseRNN, BaseNN
 
 __all__ = ['BasePreprocessor',
+            'BaseNN',
            'BaseRNN']

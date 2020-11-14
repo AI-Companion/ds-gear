@@ -10,6 +10,7 @@ import pickle
 import subprocess
 from typing import List
 import numpy as np
+import pandas as pd
 from dsg.layers import FastTextEmbedding, Glove6BEmbedding
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
@@ -104,7 +105,152 @@ class BasePreprocessor(ABC):
         """
         pass
 
-class BaseRNN(ABC):
+class BaseNN(ABC):
+    """
+    Base class for recurrent neural network models.
+    """
+    def __init__(self, **kwargs):
+        keys = kwargs.keys()
+        if 'data_preprocessor' in keys:
+            self.init_from_config(**kwargs)
+        else:
+            self.init_from_files(**kwargs)
+
+    def init_from_files(self, **kwargs):
+        """
+        Initializes the class from a previously saved model
+        Args:
+            h5_file: url to a saved h5 model file
+            class_file: url to a saved class file
+        Return:
+            None
+        """
+        pass
+
+    def init_from_config(self, **kwargs):
+        """
+        initialize the class for the first time from a given configuration file and data processor
+        Args:
+            config: .json configuration file
+            data_preprocessor: preprocessing tool for the training data
+        Return:
+            None
+        """
+        pass
+
+    @abstractmethod
+    def build_model(self):
+        """
+        Builds an RNN model according to fixed architecture
+        Return:
+            None
+        """
+        pass
+
+    @abstractmethod
+    def fit(self, X_train, y_train, X_test=None, y_test=None):
+        """
+        Fits the model object to the data
+        Args:
+            X_train: numpy array containing encoded training features
+            y_train: numpy array containing training targets
+            X_test: numpy array containing encoded test features
+            y_test: numpy array containing test targets
+        Return:
+            list of values related to each datasets and loss function
+        """
+        pass
+
+    @abstractmethod
+    def predict(self, encoded_text_list):
+        """
+        Inference method
+        Args:
+            encoded_text_list: a list of texts to be evaluated. the input is assumed to have been
+            preprocessed
+        Return:
+            numpy array containing the probabilities of a positive review for each list entry
+        """
+        pass
+
+    @abstractmethod
+    def predict_proba(self, encoded_text_list):
+        """
+        Inference method
+        Args:
+            encoded_text_list: a list of texts to be evaluated. the input is assumed to have been
+            preprocessed
+        Return:
+            numpy array containing the probabilities of a positive review for each list entry
+        """
+        pass
+
+    def save(self, file_name_prefix, save_folder):
+        """
+        Stores the data preprocessor under 'models folder'
+        Args:
+            file_name_prefix: a file name prefix having the following format 'sentiment_analysis_%Y%m%d_%H%M%S'
+            save_folder: folder under which to save the files
+        Return:
+            None
+        """
+        pass
+
+    def save_learning_curve(self, history, file_name_prefix, save_folder, metric="acc"):
+        """
+        Saves the learning curve plot
+        Args:
+            history: a dictionary object containing training and validation dataset loss function values and
+            objective function values for each training iteration
+            save_folder: folder under which to save the files
+            file_name_prefix: a file name prefix having the following format 'sentiment_analysis_%Y%m%d_%H%M%S'
+        Return:
+            None
+        """
+        acc = history.history[metric]
+        val_acc = history.history['val_'+metric]
+        loss = history.history['loss']
+        val_loss = history.history['val_loss']
+        epochs = range(len(acc))
+
+        fig, ax = plt.subplots(1, 2)
+        ax[0].plot(epochs, acc, 'bo', label='Training acc')
+        ax[0].plot(epochs, val_acc, 'b', label='Validation acc')
+        ax[0].set_title('Training and validation accuracy')
+        ax[0].legend()
+        fig.suptitle('model performance')
+        ax[1].plot(epochs, loss, 'bo', label='Training loss')
+        ax[1].plot(epochs, val_loss, 'b', label='Validation loss')
+        ax[1].set_title('Training and validation loss')
+        ax[1].legend()
+        plot_file_url = os.path.join(save_folder, file_name_prefix + "_learning_curve.png")
+        plt.savefig(plot_file_url)
+        plt.close()
+        print("----> learning curve saved to %s" % plot_file_url)
+
+    def save_classification_report(self, report, file_name_prefix, save_folder):
+        """
+        Saves the classification report to a txt file
+        Args:
+            report: a classification report object
+            file_name_prefix: a file name prefix having the following format 'named_entity_recognition_%Y%m%d_%H%M%S'
+            save_folder: folder under which to save the files
+        Return:
+            None
+        """
+        report_file_url = os.path.join(save_folder, file_name_prefix + "_report.txt")
+        df = pd.DataFrame(report).transpose().round(2)
+        df['classes'] = df.index
+        f = open(report_file_url, "w")
+        line = "{:15} |{:10} |{:10} |{:10} |{:10}|\n".format("classes", "precision", "recall", "f1-score", "support")
+        f.write(line)
+        for _, row in df.iterrows():
+            line = "{:15} |{:10} |{:10} |{:10} |{:10}|\n".format(row[4], row[0], row[1], row[2], row[3])
+            f.write(line)
+        f.close()
+        print("----> classification report saved to %s" % report_file_url)
+
+class BaseRNN(BaseNN):
     """
     Base class for recurrent neural network models.
     """
@@ -263,38 +409,6 @@ class BaseRNN(ABC):
             pickle.dump(self.word_index, handle)
         print("----> model saved to %s" % file_url_keras_model)
         print("----> class saved to %s" % file_url_class)
-
-    def save_learning_curve(self, history, file_name_prefix, save_folder, metric="acc"):
-        """
-        Saves the learning curve plot
-        Args:
-            history: a dictionary object containing training and validation dataset loss function values and
-            objective function values for each training iteration
-            save_folder: folder under which to save the files
-            file_name_prefix: a file name prefix having the following format 'sentiment_analysis_%Y%m%d_%H%M%S'
-        Return:
-            None
-        """
-        acc = history.history[metric]
-        val_acc = history.history['val_'+metric]
-        loss = history.history['loss']
-        val_loss = history.history['val_loss']
-        epochs = range(len(acc))
-
-        fig, ax = plt.subplots(1, 2)
-        ax[0].plot(epochs, acc, 'bo', label='Training acc')
-        ax[0].plot(epochs, val_acc, 'b', label='Validation acc')
-        ax[0].set_title('Training and validation accuracy')
-        ax[0].legend()
-        fig.suptitle('model performance')
-        ax[1].plot(epochs, loss, 'bo', label='Training loss')
-        ax[1].plot(epochs, val_loss, 'b', label='Validation loss')
-        ax[1].set_title('Training and validation loss')
-        ax[1].legend()
-        plot_file_url = os.path.join(save_folder, file_name_prefix + "_learning_curve.png")
-        plt.savefig(plot_file_url)
-        plt.close()
-        print("----> learning curve saved to %s" % plot_file_url)
 
 class BaseRF(ABC):
     pass
