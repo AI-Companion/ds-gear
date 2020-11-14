@@ -171,7 +171,7 @@ class CNNClassifier(BaseNN):
         self.use_pretrained_cnn = pre_trained_cnn
         self.pretrained_cnn_name = pretrained_network_name
         self.model = None
-        self.n_iter = 10
+        self.n_iter = n_iter
         self.image_height = image_height
         self.image_width = image_width
         self.idx_to_labels = idx_to_labels
