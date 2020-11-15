@@ -192,6 +192,7 @@ class CNNClassifier(BaseNN):
             layer.trainable = False
         x = vggmodel.layers[-1].output
         x = Flatten()(x)
+        # 1st connected
         x = Dense(8, activation='relu')(x)
         x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
@@ -238,10 +239,9 @@ class CNNClassifier(BaseNN):
             numpy array containing the class for token character in the sentence
         """
         probs = self.model.predict(X_test)
-        print(probs)
         ids = np.argmax(probs, axis=1)
-        max_probs = probs.max(axis=1)
-        labels = [self.idx_to_labels[i] for i in ids]
+        max_probs = probs.max(axis=1) < 0.8
+        labels = [self.idx_to_labels[v] if not max_probs[i] else "other" for i,v in enumerate(ids)]
         return labels
 
     def predict_proba(self, X_test):
@@ -252,8 +252,6 @@ class CNNClassifier(BaseNN):
         Return:
             numpy array containing the probabilities of a positive review for each list entry
         """
-        print("classed dict")
-        print(self.idx_to_labels)
         probs = self.model.predict(X_test)
         return probs
 
