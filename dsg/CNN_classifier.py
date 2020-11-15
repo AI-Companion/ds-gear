@@ -8,7 +8,7 @@ import numpy as np
 from cv2 import cv2
 from keras.applications.vgg16 import VGG16
 from keras.models import Model, load_model
-from keras.layers import Dense, Flatten, Dropout
+from keras.layers import Dense, Flatten, Dropout, BatchNormalization
 from keras.utils import to_categorical
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -192,7 +192,8 @@ class CNNClassifier(BaseNN):
             layer.trainable = False
         x = vggmodel.layers[-1].output
         x = Flatten()(x)
-        x = Dense(512, activation='relu')(x)
+        x = Dense(8, activation='relu')(x)
+        x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
         x = Dense(self.n_labels, activation='softmax')(x)
         # define new model
