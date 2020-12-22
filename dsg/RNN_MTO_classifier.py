@@ -172,12 +172,13 @@ class RNNMTO(BaseRNN):
         Return:
             list of values related to each datasets and loss function
         """
+        y_train = [self.labels_to_idx[val] for val in y_train]
+
         if self.n_labels > 2:
-                y_train = [self.labels_to_idx[val] for val in y_train]
                 y_train = to_categorical(y_train, num_classes=self.n_labels)
         if (X_test is not None) and (y_test is not None):
+            y_test = [self.labels_to_idx[val] for val in y_test]
             if self.n_labels > 2:
-                y_test = [self.labels_to_idx[val] for val in y_test]
                 y_test = to_categorical(y_test, num_classes=self.n_labels)
             history = self.model.fit(x=X_train, y=y_train, epochs=self.n_iter,
                                      batch_size=128, validation_data=(X_test, y_test),
