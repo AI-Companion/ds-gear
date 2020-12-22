@@ -5,6 +5,7 @@ Contains abstract Neural network and data preprocessor for the use cases
 from abc import ABC, abstractmethod
 import os
 import matplotlib.pyplot as plt
+import seaborn as sn
 import string
 import pickle
 import subprocess
@@ -17,6 +18,8 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input, load_model
 from keras.layers import Embedding, Dense, LSTM
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+
 
 class BasePreprocessor(ABC):
     """
@@ -79,7 +82,7 @@ class BasePreprocessor(ABC):
             tuple consisting of training predictors, training labels, validation predictors, validation labels
         """
         print("===========> data split")
-        X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=self.validation_split)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, stratify=y, test_size=self.validation_split)
         print("----> data splitted: validation ratio = %.1f" % self.validation_split)
         return X_train, X_test, np.asarray(y_train), np.asarray(y_test)
 
@@ -250,6 +253,40 @@ class BaseNN(ABC):
         f.close()
         print("----> classification report saved to %s" % report_file_url)
 
+    def save_confusion_matrix(self, y_pred, y_true, file_name_prefix, save_folder, labels=None):
+        """
+        Saves the confusion matrix to an image
+        Args:
+            y_pred: model predictions
+            y_true: true labels
+            file_name_prefix: a file name prefix having the following format 'named_entity_recognition_%Y%m%d_%H%M%S'
+            save_folder: folder under which to save the files
+            labels: class labels
+        Return:
+            None
+        """
+        plt.figure()
+        label_size = 8
+        plt.rcParams['xtick.labelsize'] = label_size 
+        plt.rcParams['ytick.labelsize'] = label_size 
+        # plt.xticks(rotation=45) 
+        # plt.yticks(rotation=45) 
+        if labels is None:
+            cm = confusion_matrix(y_true, y_pred)
+            sn.heatmap(cm, annot=True, fmt='g', cmap='Blues')
+        else:
+            cm = confusion_matrix(y_true, y_pred, labels=labels)
+            sn.heatmap(cm, annot=True, fmt='g', xticklabels=labels, yticklabels=labels, cmap='Blues')
+        
+        plot_file_url = os.path.join(save_folder, file_name_prefix + "_confusion_matrix.png")
+        plt.title('Confusion matrix of the classifier')
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.savefig(plot_file_url)
+        plt.close()
+        print("----> confusion matrix saved to %s" % plot_file_url)
+        pass
+
 class BaseRNN(BaseNN):
     """
     Base class for recurrent neural network models.
@@ -295,6 +332,7 @@ class BaseRNN(BaseNN):
             self.embeddings_path = pickle.load(f)
             self.max_length = pickle.load(f)
             self.word_index = pickle.load(f)
+            self.idx_to_labels = pickle.load(f)
 
     def init_from_config(self, pre_trained_embedding: bool, vocab_size:int, embedding_dimension:int, embedding_algorithm: str,
                          save_folder: str, n_iter: int, embeddings_path: str, max_sequence_length: int,
@@ -316,6 +354,9 @@ class BaseRNN(BaseNN):
         self.embeddings_path = embeddings_path
         self.max_length = max_sequence_length
         self.word_index = data_preprocessor.tokenizer_obj.word_index
+        self.n_labels = len(data_preprocessor.labels_to_idx)
+        self.idx_to_labels = {v:k for k,v in data_preprocessor.labels_to_idx.items() }
+        self.labels_to_idx = data_preprocessor.labels_to_idx
         self.embedding_layer = self.build_embedding()
         self.model = self.build_model()
 
@@ -407,6 +448,7 @@ class BaseRNN(BaseNN):
             pickle.dump(self.embeddings_path, handle)
             pickle.dump(self.max_length, handle)
             pickle.dump(self.word_index, handle)
+            pickle.dump(self.idx_to_labels, handle)
         print("----> model saved to %s" % file_url_keras_model)
         print("----> class saved to %s" % file_url_class)
 

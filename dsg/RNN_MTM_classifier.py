@@ -14,7 +14,6 @@ from sklearn.metrics import classification_report
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input, load_model
-from keras.utils import to_categorical
 from keras.layers import LSTM, Dense, TimeDistributed, Embedding, Bidirectional, add
 from keras_contrib.layers import CRF
 from keras_contrib.losses import crf_loss

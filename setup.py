@@ -4,17 +4,18 @@ from setuptools.command.install import install
 
 
 INSTALL_REQUIREMENTS = [
-    'numpy==1.19.0rc2',
-    'pandas==1.0.4',
-    'scikit-learn==0.23.1',
+    'numpy',
+    'pandas',
+    'scikit-learn',
     'matplotlib',
     'pylint',
     'doxypypy',
+    'seaborn',
     'pycodestyle',
     'opencv-python',
     'nltk==3.5',
-    'keras==2.3.1',
-    'tensorflow==2.2.0']
+    'keras',
+    'tensorflow']
 
 
 class InstallCommand(install):
@@ -37,7 +38,7 @@ setup(name='ds-gear',
       long_description=long_description,
       long_description_content_type="text/markdown",
       url="https://github.com/AI-Companion/ds-gear",
-      version='0.1.13',
+      version='0.1.16',
       zip_safe=False,
       dependency_links=['git+https://www.github.com/keras-team/keras-contrib.git#egg=keras-contrib'],
       install_requires=INSTALL_REQUIREMENTS,

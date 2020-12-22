@@ -7,14 +7,17 @@ import numpy as np
 from dsg.base import BasePreprocessor, BaseRNN
 from dsg.layers import Glove6BEmbedding, FastTextEmbedding
 import nltk
+nltk.download('wordnet')
+nltk.download('punkt')
+nltk.download('stopwords')
+from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from keras.preprocessing.text import Tokenizer
+from keras.utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input, load_model
 from keras.layers import Embedding, Dense, LSTM
-nltk.download('punkt')
-nltk.download('stopwords')
 
 
 class RNNMTOPreprocessor(BasePreprocessor):
@@ -37,12 +40,14 @@ class RNNMTOPreprocessor(BasePreprocessor):
             self.max_sequence_length = pickle.load(f)
             self.validation_split = pickle.load(f)
             self.vocab_size = pickle.load(f)
+            self.labels_to_idx = pickle.load(f)
 
     def init_from_config(self, max_sequence_length: int, vocab_size: int, validation_split: float):
         self.max_sequence_length = max_sequence_length
         self.vocab_size = vocab_size
         self.validation_split = validation_split
         self.tokenizer_obj = None
+        self.labels_to_idx = None
 
     def clean(self, X: List):
         """
@@ -65,11 +70,13 @@ class RNNMTOPreprocessor(BasePreprocessor):
             words = [word for word in stripped if word.isalpha()]
             stop_words = set(stopwords.words('english'))
             words = [word for word in words if word not in stop_words]
+            wordnet_lemmatizer = WordNetLemmatizer()
+            words = [wordnet_lemmatizer.lemmatize(word, pos="v") for word in words]
             review_lines.append(words)
         print("----> data cleaning finish")
         return review_lines
 
-    def fit(self, X: List):
+    def fit(self, X: List, y:List):
         """
         Performs data tokenization into a format that is digestible by the model
         Args:
@@ -84,6 +91,8 @@ class RNNMTOPreprocessor(BasePreprocessor):
         self.tokenizer_obj.word_index["pad"] = 0
         print("----> data fit finish")
         print("found %i unique tokens" % len(self.tokenizer_obj.word_index))
+        unique_labels = list(set(y))
+        self.labels_to_idx = {t: i for i, t in enumerate(unique_labels)}
 
     def save(self, file_name_prefix, save_folder):
         """
@@ -100,9 +109,10 @@ class RNNMTOPreprocessor(BasePreprocessor):
             pickle.dump(self.max_sequence_length, handle, protocol=pickle.HIGHEST_PROTOCOL)
             pickle.dump(self.validation_split, handle, protocol=pickle.HIGHEST_PROTOCOL)
             pickle.dump(self.vocab_size, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.labels_to_idx, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print("----> proprocessor object saved to %s" % file_url)
 
-    def preprocess(self, data):
+    def preprocess(self, X, y=None):
         """
         Performs data preprocessing before inference
         Args:
@@ -110,11 +120,11 @@ class RNNMTOPreprocessor(BasePreprocessor):
         Return:
             preprocessed data
         """
-        data = self.tokenizer_obj.texts_to_sequences(data)
-        data = pad_sequences(data, maxlen=self.max_sequence_length, padding="post",
-                             value=self.tokenizer_obj.word_index["pad"])
-        print("features tensor shape ", data.shape)
-        return data
+        X = self.tokenizer_obj.texts_to_sequences(X)
+        X = pad_sequences(X, maxlen=self.max_sequence_length, padding="post",
+                          value=self.tokenizer_obj.word_index["pad"])
+        print("features tensor shape ", X.shape)
+        return X
 
 
 class RNNMTO(BaseRNN):
@@ -133,7 +143,10 @@ class RNNMTO(BaseRNN):
         x = self.embedding_layer(input_layer)
         x = LSTM(64, dropout=0.2, recurrent_dropout=0.2)(x)
         x = Dense(250, activation='relu')(x)
-        x = Dense(1, activation='sigmoid')(x)
+        if self.n_labels == 2:
+            x = Dense(1, activation='sigmoid')(x)
+        else:
+            x = Dense(self.n_labels, activation='softmax')(x)
         model = Model(inputs=input_layer, outputs=x)
         # non sequential preferred because it can incorporate residual dependencies
         # model = Sequential()
@@ -141,8 +154,10 @@ class RNNMTO(BaseRNN):
         # model.add(LSTM(64, dropout=0.2, recurrent_dropout=0.2))
         # model.add(Dense(250, activation='relu'))
         # model.add(Dense(1, activation='sigmoid'))
-
-        model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['acc'])
+        if self.n_labels == 2:
+            model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['acc'])
+        else:
+            model.compile(loss='categorical_crossentropy', optimizer="adam", metrics=['acc'])
         print(model.summary())
         return model
 
@@ -157,7 +172,13 @@ class RNNMTO(BaseRNN):
         Return:
             list of values related to each datasets and loss function
         """
+        if self.n_labels > 2:
+                y_train = [self.labels_to_idx[val] for val in y_train]
+                y_train = to_categorical(y_train, num_classes=self.n_labels)
         if (X_test is not None) and (y_test is not None):
+            if self.n_labels > 2:
+                y_test = [self.labels_to_idx[val] for val in y_test]
+                y_test = to_categorical(y_test, num_classes=self.n_labels)
             history = self.model.fit(x=X_train, y=y_train, epochs=self.n_iter,
                                      batch_size=128, validation_data=(X_test, y_test),
                                      verbose=2)
@@ -172,11 +193,17 @@ class RNNMTO(BaseRNN):
             encoded_text_list: a list of texts to be evaluated. the input is assumed to have been
             preprocessed
         Return:
-            numpy array containing the probabilities of a positive review for each list entry
+            numpy array containing class predictions for each observation
         """
         probs = self.model.predict(encoded_text_list)
-        boolean_result = probs > 0.5
-        return [int(b) for b in boolean_result]
+        preds = []
+        if self.n_labels == 2:
+            boolean_result = probs > 0.5
+            preds = [int(b) for b in boolean_result]
+        else:
+            preds = np.argmax(probs, axis=1)
+            preds = [self.idx_to_labels[pred] for pred in preds]
+        return preds
 
     def predict_proba(self, encoded_text_list):
         """
@@ -185,7 +212,10 @@ class RNNMTO(BaseRNN):
             encoded_text_list: a list of texts to be evaluated. the input is assumed to have been
             preprocessed
         Return:
-            numpy array containing the probabilities of a positive review for each list entry
+            numpy array containing the probabilities for each class input
         """
         probs = self.model.predict(encoded_text_list)
-        return [p[0] for p in probs]
+        if self.n_labels == 2:
+            return [p[0] for p in probs]
+        else:
+            return probs
