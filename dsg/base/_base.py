@@ -333,6 +333,7 @@ class BaseRNN(BaseNN):
             self.max_length = pickle.load(f)
             self.word_index = pickle.load(f)
             self.idx_to_labels = pickle.load(f)
+        self.n_labels = len(self.idx_to_labels)
 
     def init_from_config(self, pre_trained_embedding: bool, vocab_size:int, embedding_dimension:int, embedding_algorithm: str,
                          save_folder: str, n_iter: int, embeddings_path: str, max_sequence_length: int,

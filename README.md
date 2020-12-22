@@ -9,15 +9,15 @@ Example applications include Named entity recognition, machine translation
 ### Installation
 ## Depenencies
 - Python (> 3.6)
-- Numpy (> 1.19)
-- Pandas (> 1.0.4)
-- sklearn (>0.23)
+- Numpy
+- Pandas
+- sklearn
 - Matplotlib
 - Pylint
 - Doxypypy
 - Nltk (==3.5)
-- keras (v 2.3.1)
-- tensorflow (v 2.2.0)
+- keras
+- tensorflow
 - keras-contrib (need to be installed prior to this package)
 ## User installation
 1. keras-contrib installation (please refer to git repo @ https://github.com/keras-team/keras-contrib)

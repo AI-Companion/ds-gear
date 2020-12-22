@@ -2,7 +2,7 @@ import os
 import string
 import pickle
 import time
-from typing import List
+from typing import List, Dict
 import numpy as np
 from dsg.base import BasePreprocessor, BaseRNN
 from dsg.layers import Glove6BEmbedding, FastTextEmbedding
@@ -76,11 +76,13 @@ class RNNMTOPreprocessor(BasePreprocessor):
         print("----> data cleaning finish")
         return review_lines
 
-    def fit(self, X: List, y:List):
+    def fit(self, X: List, y:List, labels_to_idx:Dict=None):
         """
         Performs data tokenization into a format that is digestible by the model
         Args:
             X: list of predictors already cleaned
+            y: list of targets
+            labels_to_idx: dictionary containing the mapping from labels to desired indices
         Return:
             tokenizer object and tokenized input features
         """
@@ -92,7 +94,10 @@ class RNNMTOPreprocessor(BasePreprocessor):
         print("----> data fit finish")
         print("found %i unique tokens" % len(self.tokenizer_obj.word_index))
         unique_labels = list(set(y))
-        self.labels_to_idx = {t: i for i, t in enumerate(unique_labels)}
+        if labels_to_idx is None:
+            self.labels_to_idx = {t: i for i, t in enumerate(unique_labels)}
+        else:
+            self.labels_to_idx = labels_to_idx
 
     def save(self, file_name_prefix, save_folder):
         """
@@ -112,11 +117,11 @@ class RNNMTOPreprocessor(BasePreprocessor):
             pickle.dump(self.labels_to_idx, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print("----> proprocessor object saved to %s" % file_url)
 
-    def preprocess(self, X, y=None):
+    def preprocess(self, X):
         """
         Performs data preprocessing before inference
         Args:
-            data: data to evaluate
+            X: data to evaluate
         Return:
             preprocessed data
         """
@@ -217,6 +222,7 @@ class RNNMTO(BaseRNN):
             numpy array containing the probabilities for each class input
         """
         probs = self.model.predict(encoded_text_list)
+        print(self.idx_to_labels.values())
         if self.n_labels == 2:
             return [p[0] for p in probs]
         else:
