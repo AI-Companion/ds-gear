@@ -222,7 +222,6 @@ class RNNMTO(BaseRNN):
             numpy array containing the probabilities for each class input
         """
         probs = self.model.predict(encoded_text_list)
-        print(self.idx_to_labels.values())
         if self.n_labels == 2:
             return [p[0] for p in probs]
         else:
