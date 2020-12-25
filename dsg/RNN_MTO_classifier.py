@@ -17,7 +17,7 @@ from keras.preprocessing.text import Tokenizer
 from keras.utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input, load_model
-from keras.layers import Embedding, Dense, LSTM
+from keras.layers import Embedding, Dense, LSTM, Dropout, BatchNormalization
 
 
 class RNNMTOPreprocessor(BasePreprocessor):
