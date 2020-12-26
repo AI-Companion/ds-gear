@@ -147,12 +147,15 @@ class RNNMTO(BaseRNN):
         input_layer = Input(shape=(self.max_length,), name='input')
         x = self.embedding_layer(input_layer)
         x = LSTM(64, dropout=0.2, recurrent_dropout=0.2)(x)
-        x = Dense(250, activation='relu')(x)
-        x = BatchNormalization()(x)
-        x = Dropout(0.5)(x)
         if self.n_labels == 2:
+            x = Dense(16, activation='relu')(x)
+            x = BatchNormalization()(x)
+            x = Dropout(0.5)(x)
             x = Dense(1, activation='sigmoid')(x)
         else:
+            x = Dense(32, activation='relu')(x)
+            x = BatchNormalization()(x)
+            x = Dropout(0.5)(x)
             x = Dense(self.n_labels, activation='softmax')(x)
         model = Model(inputs=input_layer, outputs=x)
         # non sequential preferred because it can incorporate residual dependencies
