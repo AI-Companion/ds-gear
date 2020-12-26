@@ -148,7 +148,7 @@ class RNNMTO(BaseRNN):
         x = self.embedding_layer(input_layer)
         x = LSTM(64, dropout=0.2, recurrent_dropout=0.2)(x)
         if self.n_labels == 2:
-            x = Dense(16, activation='relu')(x)
+            x = Dense(8, activation='relu')(x)
             x = BatchNormalization()(x)
             x = Dropout(0.5)(x)
             x = Dense(1, activation='sigmoid')(x)
@@ -214,7 +214,7 @@ class RNNMTO(BaseRNN):
             preds = [int(b) for b in boolean_result]
         else:
             preds = np.argmax(probs, axis=1)
-            preds = [self.idx_to_labels[pred] for pred in preds]
+        preds = [self.idx_to_labels[pred] for pred in preds]
         return preds
 
     def predict_proba(self, encoded_text_list):
