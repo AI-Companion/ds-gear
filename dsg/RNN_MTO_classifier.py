@@ -147,6 +147,7 @@ class RNNMTO(BaseRNN):
         input_layer = Input(shape=(self.max_length,), name='input')
         x = self.embedding_layer(input_layer)
         if self.n_labels == 2:
+            x = LSTM(16, dropout=0.2, recurrent_dropout=0.2, return_sequences=True)(x)
             x = LSTM(16, dropout=0.2, recurrent_dropout=0.2)(x)
             x = Dense(4, activation='relu')(x)
             x = BatchNormalization()(x)
