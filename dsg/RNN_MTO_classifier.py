@@ -68,8 +68,8 @@ class RNNMTOPreprocessor(BasePreprocessor):
             table = str.maketrans('', '', string.punctuation)
             stripped = [w.translate(table) for w in tokens]
             words = [word for word in stripped if word.isalpha()]
-            stop_words = set(stopwords.words('english'))
-            words = [word for word in words if word not in stop_words]
+            #stop_words = set(stopwords.words('english'))
+            #words = [word for word in words if word not in stop_words]
             wordnet_lemmatizer = WordNetLemmatizer()
             words = [wordnet_lemmatizer.lemmatize(word, pos="v") for word in words]
             review_lines.append(words)
