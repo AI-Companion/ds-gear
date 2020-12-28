@@ -148,10 +148,9 @@ class RNNMTO(BaseRNN):
         x = self.embedding_layer(input_layer)
         if self.n_labels == 2:
             x = LSTM(16, dropout=0.2, recurrent_dropout=0.2)(x)
-            x = LSTM(4, dropout=0.2, recurrent_dropout=0.2)(x)
-            #x = Dense(4, activation='relu')(x)
-            #x = BatchNormalization()(x)
-            #x = Dropout(0.5)(x)
+            x = Dense(4, activation='relu')(x)
+            x = BatchNormalization()(x)
+            x = Dropout(0.5)(x)
             x = Dense(1, activation='sigmoid')(x)
         else:
             x = LSTM(64, dropout=0.2, recurrent_dropout=0.2)(x)
